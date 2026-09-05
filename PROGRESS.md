@@ -32,10 +32,12 @@ Updated: 2026-09-05
 - Added local track move/delete controls and playlist deletion that preserves its tracks in the first-level category.
 - Removed the three bundled M4A files and obsolete audio generator from the repository.
 - Updated the Service Worker to cache only the app shell and updated the README and repository guidelines for local audio storage.
+- Committed the local audio library as `a4573fd feat: add local audio library` on `codex/local-audio-library` and pushed the branch to `origin`.
+- Confirmed the working tree is clean and the local branch tracks `origin/codex/local-audio-library`.
 
 ## Pending
 
-- Enable GitHub Pages: `main` branch, root directory.
+- Configure GitHub Pages to publish `codex/local-audio-library` from the repository root, or merge this branch into `main` before publishing.
 - Test local import, playback, persistence, and offline reopening on iPhone Safari from the Home Screen PWA.
 - Future: add more tracks.
 - Future: add local library export/import backup if needed.
