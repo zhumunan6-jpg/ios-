@@ -35,10 +35,11 @@ Updated: 2026-09-05
 - Committed the local audio library as `a4573fd feat: add local audio library` on `codex/local-audio-library` and pushed the branch to `origin`.
 - Confirmed the working tree is clean and the local branch tracks `origin/codex/local-audio-library`.
 - Changed the iPhone file picker to `accept="*/*"` and expanded M4A MIME validation so Apple MPEG-4 audio files can be selected before app-side checking.
+- Fast-forward merged `codex/local-audio-library` into `main` and pushed `main` to `origin` at `d877c8f`.
 
 ## Pending
 
-- Configure GitHub Pages to publish `codex/local-audio-library` from the repository root, or merge this branch into `main` before publishing.
+- Configure GitHub Pages to publish `main` from the repository root.
 - Test local import, playback, persistence, and offline reopening on iPhone Safari after the file-picker filter change.
 - Future: add more tracks.
 - Future: add local library export/import backup if needed.
