@@ -1,4 +1,4 @@
-const CACHE_NAME = "audio-player-mvp-v1";
+const CACHE_NAME = "audio-player-mvp-v2";
 
 const appShell = [
   "./",
@@ -6,6 +6,8 @@ const appShell = [
   "./assets/audioPlayer.css",
   "./assets/audioPlaylist.js",
   "./audio/bbbbb.wav",
+  "./audio/work-focus.wav",
+  "./audio/entertainment-chill.wav",
   "./manifest.webmanifest",
   "./icons/app-icon.svg"
 ];
@@ -51,4 +53,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-

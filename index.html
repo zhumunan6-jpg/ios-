@@ -13,12 +13,23 @@
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <p class="eyebrow">PWA MVP</p>
+        <p class="eyebrow">Audio Library</p>
         <h1>中文音频播放器</h1>
-        <p class="subtitle">本地音频 · 简单播放</p>
+        <p class="subtitle">按分类整理你的声音空间</p>
       </header>
 
       <section class="player-container" aria-labelledby="player-title">
+        <div class="category-section">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">音频分类</p>
+              <h2 id="categoryTitle">工作音乐</h2>
+            </div>
+            <span id="trackCount" class="track-count">2 首音频</span>
+          </div>
+          <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="音频分类"></div>
+        </div>
+
         <div class="track-summary">
           <span class="track-label">正在播放</span>
           <h2 id="player-title">BBBBB 音频</h2>
@@ -42,6 +53,11 @@
             下一首
           </button>
         </div>
+
+        <button id="playModeButton" class="mode-button" type="button" aria-pressed="false">
+          <span class="mode-icon" aria-hidden="true">↗</span>
+          <span>顺序播放</span>
+        </button>
 
         <div class="progress-section">
           <label for="progressRail" class="sr-only">播放进度</label>
@@ -72,4 +88,3 @@
     <script type="module" src="./assets/audioPlaylist.js"></script>
   </body>
 </html>
-
