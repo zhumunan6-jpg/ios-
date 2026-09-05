@@ -36,6 +36,7 @@ Updated: 2026-09-05
 - Confirmed the working tree is clean and the local branch tracks `origin/codex/local-audio-library`.
 - Changed the iPhone file picker to `accept="*/*"` and expanded M4A MIME validation so Apple MPEG-4 audio files can be selected before app-side checking.
 - Fast-forward merged `codex/local-audio-library` into `main` and pushed `main` to `origin` at `d877c8f`.
+- Deleted the merged `codex/local-audio-library` branch locally and from `origin`; `main` is now the active release branch.
 
 ## Pending
 
