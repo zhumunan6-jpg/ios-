@@ -68,7 +68,15 @@ function getDuplicateKey(file) {
 
 function isAudioFile(file) {
   return /\.(aac|m4a|mp3|wav)$/i.test(file.name || "")
-    || ["audio/aac", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"].includes(file.type);
+    || [
+      "audio/aac",
+      "audio/mp4",
+      "audio/mp4a-latm",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/x-m4a",
+      "audio/x-wav"
+    ].includes((file.type || "").toLowerCase());
 }
 
 async function getAllFromStore(storeName) {

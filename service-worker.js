@@ -1,4 +1,4 @@
-const CACHE_NAME = "audio-player-mvp-v5";
+const CACHE_NAME = "audio-player-mvp-v6";
 
 const appShell = [
   "./",
