@@ -1,44 +1,16 @@
+import {
+  deletePlaylist as deleteStoredPlaylist,
+  deleteTrack as deleteStoredTrack,
+  getLibrary,
+  getTrackBlob,
+  initLibrary,
+  moveTrack as moveStoredTrack,
+  saveImportedTracks
+} from "./audioLibraryStore.js";
+
 const categories = [
-  {
-    id: "work",
-    title: "工作音乐",
-    items: [
-      {
-        id: "work-deep-focus",
-        type: "playlist",
-        title: "深度工作音乐极简器乐高效",
-        tracks: [
-          {
-            id: "work-deep-focus-1",
-            type: "track",
-            title: "一",
-            artist: "深度工作音乐 · 第一部分",
-            src: "./audio/work-deep-focus-1.m4a"
-          },
-          {
-            id: "work-deep-focus-2",
-            type: "track",
-            title: "二",
-            artist: "深度工作音乐 · 第二部分",
-            src: "./audio/work-deep-focus-2.m4a"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: "entertainment",
-    title: "娱乐音乐",
-    items: [
-      {
-        id: "entertainment-hires-rock",
-        type: "track",
-        title: "Hi-Res无损整轨",
-        artist: "万能青年旅店 · 二专",
-        src: "./audio/entertainment-hires-rock.m4a"
-      }
-    ]
-  }
+  { id: "work", title: "工作音乐" },
+  { id: "entertainment", title: "娱乐音乐" }
 ];
 
 const audio = document.querySelector("#audioPlayer");
@@ -61,10 +33,33 @@ const backButton = document.querySelector("#backButton");
 const playlistKicker = document.querySelector("#playlistKicker");
 const playlistTitle = document.querySelector("#playlistTitle");
 const playlistHint = document.querySelector("#playlistHint");
+const importButton = document.querySelector("#importButton");
+const fileInput = document.querySelector("#fileInput");
+const libraryModal = document.querySelector("#libraryModal");
+const modalTitle = document.querySelector("#modalTitle");
+const modalCloseButton = document.querySelector("#modalCloseButton");
+const modalFileSummary = document.querySelector("#modalFileSummary");
+const modalCategorySelect = document.querySelector("#modalCategorySelect");
+const modalDestinationSelect = document.querySelector("#modalDestinationSelect");
+const modalDestinationLabel = document.querySelector("#modalDestinationLabel");
+const newPlaylistField = document.querySelector("#newPlaylistField");
+const newPlaylistName = document.querySelector("#newPlaylistName");
+const existingPlaylistField = document.querySelector("#existingPlaylistField");
+const existingPlaylistSelect = document.querySelector("#existingPlaylistSelect");
+const modalHint = document.querySelector("#modalHint");
+const modalCancelButton = document.querySelector("#modalCancelButton");
+const modalConfirmButton = document.querySelector("#modalConfirmButton");
 
 let activeCategoryIndex = 0;
 let lastVolume = 1;
 let playMode = "sequential";
+let library = { playlists: [], tracks: [] };
+let libraryReady = false;
+let currentObjectUrl = null;
+let loadRequestId = 0;
+let modalMode = null;
+let selectedFiles = [];
+let movingTrackId = null;
 const categoryStates = categories.map(() => ({
   playlistId: null,
   activeIndex: 0,
@@ -80,24 +75,44 @@ function getActiveState() {
 }
 
 function getActivePlaylist() {
-  const state = getActiveState();
+  const playlistId = getActiveState().playlistId;
+  return playlistId
+    ? library.playlists.find((item) => item.id === playlistId) || null
+    : null;
+}
 
-  if (!state.playlistId) {
-    return null;
-  }
+function getActiveTracks() {
+  const activePlaylist = getActivePlaylist();
 
-  return getActiveCategory().items.find(
-    (item) => item.type === "playlist" && item.id === state.playlistId
-  ) || null;
+  return library.tracks
+    .filter((track) => {
+      if (activePlaylist) {
+        return track.playlistId === activePlaylist.id;
+      }
+
+      return track.categoryId === getActiveCategory().id && track.playlistId === null;
+    })
+    .sort((left, right) => (left.order || 0) - (right.order || 0));
 }
 
 function getActiveItems() {
   const activePlaylist = getActivePlaylist();
-  return activePlaylist ? activePlaylist.tracks || [] : getActiveCategory().items;
-}
+  if (activePlaylist) {
+    return getActiveTracks().map((track) => ({ ...track, type: "track" }));
+  }
 
-function getActiveTracks() {
-  return getActiveItems().filter((item) => item.type === "track");
+  const directTracks = getActiveTracks().map((track) => ({ ...track, type: "track" }));
+  const categoryPlaylists = library.playlists
+    .filter((item) => item.categoryId === getActiveCategory().id)
+    .map((item) => ({
+      ...item,
+      type: "playlist",
+      tracks: library.tracks.filter((track) => track.playlistId === item.id)
+    }));
+
+  return [...directTracks, ...categoryPlaylists].sort(
+    (left, right) => (left.order || 0) - (right.order || 0) || (left.createdAt || 0) - (right.createdAt || 0)
+  );
 }
 
 function formatTime(seconds) {
@@ -112,6 +127,18 @@ function formatTime(seconds) {
 
 function setStatus(message) {
   statusMessage.textContent = message;
+}
+
+function getCategoryIndex(categoryId) {
+  return categories.findIndex((category) => category.id === categoryId);
+}
+
+function getFriendlyError(error) {
+  if (error?.name === "QuotaExceededError") {
+    return "本机存储空间不足，请删除不需要的音频后重试";
+  }
+
+  return error?.message || "操作失败，请稍后重试";
 }
 
 function renderCategories() {
@@ -151,7 +178,7 @@ function createItemButton(item, isActive, clickHandler) {
   title.textContent = item.title;
   detail.textContent = item.type === "playlist"
     ? `${item.tracks?.length || 0} 首音频`
-    : item.artist || "单曲音频";
+    : "本机音频";
   copy.append(title, detail);
 
   button.append(icon, copy);
@@ -167,6 +194,19 @@ function createItemButton(item, isActive, clickHandler) {
     button.setAttribute("aria-current", String(isActive));
   }
 
+  return button;
+}
+
+function createActionButton(label, title, clickHandler, isDanger = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `item-action-button${isDanger ? " danger" : ""}`;
+  button.textContent = label;
+  button.title = title;
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    clickHandler();
+  });
   return button;
 }
 
@@ -189,15 +229,17 @@ function renderPlaylist() {
   if (items.length === 0) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "playlist-empty";
-    emptyItem.textContent = currentPlaylist ? "歌单暂无音频" : "暂无音频或歌单，请稍后添加";
+    emptyItem.textContent = currentPlaylist ? "歌单暂无音频" : "暂无音频或歌单，请点击“本机上传”";
     playlist.append(emptyItem);
   }
 
   items.forEach((item) => {
     const itemElement = document.createElement("li");
+    const row = document.createElement("div");
     const isActive = item.type === "track" && item.id === state.activeTrackId;
 
-    itemElement.append(
+    row.className = "playlist-row";
+    row.append(
       createItemButton(
         item,
         isActive,
@@ -206,6 +248,22 @@ function renderPlaylist() {
           : () => loadTrack(tracks.findIndex((track) => track.id === item.id), true)
       )
     );
+
+    const actions = document.createElement("div");
+    actions.className = "item-actions";
+    if (item.type === "playlist") {
+      actions.append(
+        createActionButton("删除", "删除歌单并保留其中音频", () => removePlaylist(item), true)
+      );
+    } else {
+      actions.append(
+        createActionButton("移动", "移动音频", () => openMoveModal(item)),
+        createActionButton("删除", "删除音频", () => removeTrack(item), true)
+      );
+    }
+
+    row.append(actions);
+    itemElement.append(row);
     playlist.append(itemElement);
   });
 
@@ -238,7 +296,14 @@ function updatePlayModeButton() {
   );
 }
 
-function loadTrack(index, shouldPlay = false) {
+function releaseCurrentObjectUrl() {
+  if (currentObjectUrl) {
+    URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = null;
+  }
+}
+
+async function loadTrack(index, shouldPlay = false) {
   const tracks = getActiveTracks();
   const state = getActiveState();
 
@@ -246,6 +311,8 @@ function loadTrack(index, shouldPlay = false) {
     state.activeIndex = 0;
     state.activeTrackId = null;
     playerTitle.textContent = "暂无音频";
+    audio.pause();
+    releaseCurrentObjectUrl();
     audio.removeAttribute("src");
     audio.load();
     renderPlaylist();
@@ -257,51 +324,78 @@ function loadTrack(index, shouldPlay = false) {
 
   state.activeIndex = (index + tracks.length) % tracks.length;
   const track = tracks[state.activeIndex];
+  const requestId = ++loadRequestId;
   state.activeTrackId = track.id;
 
   playerTitle.textContent = track.title;
-  audio.src = new URL(track.src, document.baseURI).href;
+  audio.pause();
+  releaseCurrentObjectUrl();
+  audio.removeAttribute("src");
   audio.load();
   renderPlaylist();
   updateProgress();
   updatePlaybackState();
   setStatus(shouldPlay ? "正在加载音频…" : "点击“播放”开始");
 
-  if (shouldPlay) {
-    audio.play().catch(() => {
+  try {
+    const blob = await getTrackBlob(track.id);
+    if (requestId !== loadRequestId) {
+      return;
+    }
+
+    if (!blob) {
+      throw new Error("音频文件不存在");
+    }
+
+    currentObjectUrl = URL.createObjectURL(blob);
+    audio.src = currentObjectUrl;
+    audio.load();
+
+    if (shouldPlay) {
+      await audio.play();
+    }
+  } catch (error) {
+    if (requestId === loadRequestId) {
       updatePlaybackState();
-      setStatus("播放被阻止，请再次点击“播放”");
-    });
+      setStatus(`音频无法播放：${getFriendlyError(error)}`);
+    }
   }
 }
 
 function openPlaylist(playlistId) {
-  const selectedPlaylist = getActiveCategory().items.find(
-    (item) => item.type === "playlist" && item.id === playlistId
-  );
-
+  const selectedPlaylist = library.playlists.find((item) => item.id === playlistId);
   if (!selectedPlaylist) {
     return;
   }
 
   const state = getActiveState();
+  const previousTrackId = state.activeTrackId;
   state.playlistId = playlistId;
   state.activeIndex = 0;
+  if (!library.tracks.some((track) => track.id === previousTrackId && track.playlistId === playlistId)) {
+    state.activeTrackId = previousTrackId;
+  }
   renderPlaylist();
   setStatus(`已打开歌单“${selectedPlaylist.title}”`);
 }
 
 function closePlaylist() {
   const state = getActiveState();
+  const activeTrack = library.tracks.find((track) => track.id === state.activeTrackId);
 
   state.playlistId = null;
   state.activeIndex = 0;
-  renderPlaylist();
-  setStatus(`已返回${getActiveCategory().title}`);
+  if (activeTrack?.playlistId !== null) {
+    state.activeTrackId = null;
+    loadTrack(0);
+  } else {
+    renderPlaylist();
+    setStatus(`已返回${getActiveCategory().title}`);
+  }
 }
 
 function switchCategory(index) {
-  if (index === activeCategoryIndex) {
+  if (index === activeCategoryIndex || !libraryReady) {
     return;
   }
 
@@ -311,12 +405,264 @@ function switchCategory(index) {
   state.activeIndex = 0;
   state.activeTrackId = null;
   audio.pause();
+  ++loadRequestId;
+  releaseCurrentObjectUrl();
   renderCategories();
   loadTrack(0);
   setStatus(`已切换到${getActiveCategory().title}`);
 }
 
+function populateCategorySelect(selectedCategoryId = getActiveCategory().id) {
+  modalCategorySelect.replaceChildren();
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.title;
+    option.selected = category.id === selectedCategoryId;
+    modalCategorySelect.append(option);
+  });
+}
+
+function populateExistingPlaylists(categoryId) {
+  const playlistsForCategory = library.playlists.filter((item) => item.categoryId === categoryId);
+  existingPlaylistSelect.replaceChildren();
+
+  if (playlistsForCategory.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "该分类暂无歌单";
+    existingPlaylistSelect.append(option);
+    existingPlaylistSelect.disabled = true;
+    return;
+  }
+
+  existingPlaylistSelect.disabled = false;
+  playlistsForCategory.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.title;
+    existingPlaylistSelect.append(option);
+  });
+}
+
+function updateModalDestinationFields() {
+  const destinationType = modalDestinationSelect.value;
+  const categoryId = modalCategorySelect.value;
+  const isMove = modalMode === "move";
+
+  newPlaylistField.hidden = isMove || destinationType !== "new-playlist";
+  existingPlaylistField.hidden = destinationType !== "playlist";
+  if (destinationType === "playlist") {
+    populateExistingPlaylists(categoryId);
+  }
+
+  modalConfirmButton.disabled = destinationType === "playlist" && existingPlaylistSelect.disabled;
+  if (isMove) {
+    modalHint.textContent = "音频将移动到所选一级分类或已有歌单，不会复制文件。";
+  } else {
+    modalHint.textContent = "本次选择的音频会进入同一个目标。";
+  }
+}
+
+function setModalDestinationOptions(includeNewPlaylist) {
+  modalDestinationSelect.replaceChildren();
+  const options = [
+    ["category", "直接进入一级分类"],
+    ...(includeNewPlaylist ? [["new-playlist", "新建二级歌单"]] : []),
+    ["playlist", "进入已有二级歌单"]
+  ];
+
+  options.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    modalDestinationSelect.append(option);
+  });
+}
+
+function openImportModal(files) {
+  modalMode = "import";
+  movingTrackId = null;
+  selectedFiles = files;
+  modalTitle.textContent = "导入本机音频";
+  modalDestinationLabel.textContent = "音频去向";
+  modalFileSummary.textContent = `已选择 ${files.length} 个文件`;
+  modalConfirmButton.textContent = "确认导入";
+  newPlaylistName.value = "";
+  populateCategorySelect();
+  setModalDestinationOptions(true);
+  libraryModal.hidden = false;
+  updateModalDestinationFields();
+  modalCategorySelect.focus();
+}
+
+function openMoveModal(track) {
+  modalMode = "move";
+  movingTrackId = track.id;
+  selectedFiles = [];
+  modalTitle.textContent = "移动本机音频";
+  modalDestinationLabel.textContent = "移动到";
+  modalFileSummary.textContent = `当前音频：${track.title}`;
+  modalConfirmButton.textContent = "确认移动";
+  newPlaylistName.value = "";
+  populateCategorySelect(track.categoryId);
+  setModalDestinationOptions(false);
+  libraryModal.hidden = false;
+  updateModalDestinationFields();
+}
+
+function closeModal() {
+  libraryModal.hidden = true;
+  modalMode = null;
+  movingTrackId = null;
+  selectedFiles = [];
+  modalConfirmButton.disabled = false;
+}
+
+function getModalDestination() {
+  const type = modalDestinationSelect.value;
+  const categoryId = modalCategorySelect.value;
+
+  if (type === "new-playlist") {
+    return { type, categoryId, title: newPlaylistName.value };
+  }
+
+  if (type === "playlist") {
+    return { type, categoryId, playlistId: existingPlaylistSelect.value };
+  }
+
+  return { type: "category", categoryId };
+}
+
+async function confirmModalAction() {
+  modalConfirmButton.disabled = true;
+
+  try {
+    const destination = getModalDestination();
+    if (modalMode === "import") {
+      const result = await saveImportedTracks(selectedFiles, destination);
+      closeModal();
+      await refreshLibrary();
+
+      const categoryIndex = getCategoryIndex(destination.categoryId);
+      activeCategoryIndex = categoryIndex >= 0 ? categoryIndex : 0;
+      const state = getActiveState();
+      state.playlistId = result.playlist?.id
+        || (destination.type === "playlist" ? destination.playlistId : null);
+      state.activeTrackId = null;
+      state.activeIndex = 0;
+      renderCategories();
+      await loadTrack(0);
+
+      const messages = [`已导入 ${result.imported} 个音频`];
+      if (result.skippedDuplicates) {
+        messages.push(`跳过 ${result.skippedDuplicates} 个重复文件`);
+      }
+      if (result.skippedUnsupported) {
+        messages.push(`跳过 ${result.skippedUnsupported} 个不支持的文件`);
+      }
+      setStatus(messages.join("，"));
+      return;
+    }
+
+    const movedTrack = await moveStoredTrack(movingTrackId, {
+      categoryId: destination.categoryId,
+      playlistId: destination.type === "playlist" ? destination.playlistId : null
+    });
+    const wasActive = getActiveState().activeTrackId === movedTrack.id;
+    closeModal();
+    if (wasActive) {
+      audio.pause();
+      ++loadRequestId;
+      releaseCurrentObjectUrl();
+    }
+    await refreshLibrary();
+    if (wasActive) {
+      getActiveState().activeTrackId = null;
+      await loadTrack(0);
+    }
+    setStatus("音频已移动");
+  } catch (error) {
+    modalConfirmButton.disabled = false;
+    setStatus(getFriendlyError(error));
+  }
+}
+
+async function removeTrack(track) {
+  if (!window.confirm(`确定删除“${track.title}”吗？删除后无法从本机音频库恢复。`)) {
+    return;
+  }
+
+  const wasActive = getActiveState().activeTrackId === track.id;
+  if (wasActive) {
+    audio.pause();
+    ++loadRequestId;
+    releaseCurrentObjectUrl();
+  }
+
+  try {
+    await deleteStoredTrack(track.id);
+    await refreshLibrary();
+    if (wasActive) {
+      getActiveState().activeTrackId = null;
+      await loadTrack(0);
+    }
+    setStatus("音频已删除");
+  } catch (error) {
+    setStatus(getFriendlyError(error));
+  }
+}
+
+async function removePlaylist(selectedPlaylist) {
+  if (!window.confirm(`确定删除歌单“${selectedPlaylist.title}”吗？其中音频会保留并移回一级分类。`)) {
+    return;
+  }
+
+  const activeTrack = library.tracks.find((track) => track.id === getActiveState().activeTrackId);
+  const wasAffected = activeTrack?.playlistId === selectedPlaylist.id;
+  if (wasAffected) {
+    audio.pause();
+    ++loadRequestId;
+    releaseCurrentObjectUrl();
+  }
+
+  try {
+    await deleteStoredPlaylist(selectedPlaylist.id);
+    if (getActiveState().playlistId === selectedPlaylist.id) {
+      getActiveState().playlistId = null;
+    }
+    await refreshLibrary();
+    if (wasAffected) {
+      getActiveState().activeTrackId = null;
+      await loadTrack(0);
+    }
+    setStatus("歌单已删除，音频已保留在一级分类");
+  } catch (error) {
+    setStatus(getFriendlyError(error));
+  }
+}
+
+async function refreshLibrary() {
+  library = await getLibrary();
+  categoryStates.forEach((state) => {
+    if (state.playlistId && !library.playlists.some((item) => item.id === state.playlistId)) {
+      state.playlistId = null;
+      state.activeIndex = 0;
+    }
+    if (state.activeTrackId && !library.tracks.some((item) => item.id === state.activeTrackId)) {
+      state.activeTrackId = null;
+      state.activeIndex = 0;
+    }
+  });
+  renderCategories();
+  renderPlaylist();
+}
+
 playButton.addEventListener("click", () => {
+  if (!libraryReady) {
+    return;
+  }
+
   if (getActiveTracks().length === 0) {
     setStatus(getActivePlaylist() ? "当前歌单暂无音频" : "当前分类暂无音频");
     return;
@@ -370,6 +716,36 @@ muteButton.addEventListener("click", () => {
   }
 });
 
+importButton.addEventListener("click", () => {
+  if (libraryReady) {
+    fileInput.click();
+  }
+});
+
+fileInput.addEventListener("change", () => {
+  const files = Array.from(fileInput.files || []);
+  fileInput.value = "";
+  if (files.length > 0) {
+    openImportModal(files);
+  }
+});
+
+modalCategorySelect.addEventListener("change", updateModalDestinationFields);
+modalDestinationSelect.addEventListener("change", updateModalDestinationFields);
+modalCloseButton.addEventListener("click", closeModal);
+modalCancelButton.addEventListener("click", closeModal);
+modalConfirmButton.addEventListener("click", confirmModalAction);
+libraryModal.addEventListener("click", (event) => {
+  if (event.target === libraryModal) {
+    closeModal();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !libraryModal.hidden) {
+    closeModal();
+  }
+});
+
 audio.addEventListener("loadedmetadata", updateProgress);
 audio.addEventListener("durationchange", updateProgress);
 audio.addEventListener("timeupdate", updateProgress);
@@ -403,19 +779,39 @@ audio.addEventListener("ended", () => {
   setStatus(`${getActivePlaylist()?.title || getActiveCategory().title}已播放完毕`);
 });
 audio.addEventListener("error", () => {
-  updatePlaybackState();
-  setStatus("音频加载失败，请刷新页面重试");
+  if (audio.src) {
+    updatePlaybackState();
+    setStatus("当前音频格式无法由 iOS Safari 播放");
+  }
 });
+
+async function initialize() {
+  try {
+    await initLibrary();
+    await refreshLibrary();
+    libraryReady = true;
+    audio.volume = 1;
+    updatePlayModeButton();
+    await loadTrack(0);
+
+    if (library.tracks.length === 0) {
+      setStatus("音频库为空，点击“本机上传”开始");
+    }
+  } catch (error) {
+    setStatus(`本机音频库不可用：${getFriendlyError(error)}`);
+    importButton.disabled = true;
+  }
+}
 
 audio.volume = 1;
 renderCategories();
 updatePlayModeButton();
-loadTrack(0);
+initialize();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js").catch(() => {
-      setStatus("离线缓存暂不可用，但仍可在线播放");
+      setStatus("离线缓存暂不可用，但仍可使用已保存的本机音频");
     });
   });
 }

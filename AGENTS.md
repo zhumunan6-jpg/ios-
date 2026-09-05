@@ -9,9 +9,10 @@ Before starting any new task or conversation, read `PROGRESS.md` to recover the 
 This repository is a dependency-free static PWA audio player.
 
 - `index.html` contains the Chinese player shell and accessible controls.
-- `assets/audioPlaylist.js` contains the track catalog and playback logic.
+- `assets/audioPlaylist.js` contains the local library UI and playback logic.
+- `assets/audioLibraryStore.js` contains the IndexedDB audio and playlist storage layer.
 - `assets/audioPlayer.css` contains responsive layout and component styles.
-- `audio/` stores bundled audio files, currently `audio/bbbbb.wav`.
+- User audio is imported from the iPhone Files app and stored in the browser's private IndexedDB; the repository has no bundled audio files.
 - `icons/` stores PWA artwork.
 - `manifest.webmanifest` and `service-worker.js` provide install metadata and offline caching.
 - `scripts/` contains reproducible asset-generation scripts.
@@ -25,11 +26,10 @@ There is currently no automated test directory or build output directory.
 Run these commands from the repository root:
 
 ```bash
-npm run generate-audio  # Regenerate the bundled BBBBB WAV file
 npm start               # Start the local server at http://localhost:4173
 ```
 
-Use a local HTTP server rather than opening `index.html` directly; Service Workers require an HTTP(S) origin. GitHub Pages publishes the static root directly, with no build step.
+Use a local HTTP server rather than opening `index.html` directly; Service Workers and IndexedDB require an HTTP(S) origin. GitHub Pages publishes the static root directly, with no build step.
 
 ## Coding Style & Naming Conventions
 
@@ -37,7 +37,7 @@ Use two-space indentation for HTML, CSS, and JavaScript. Use semicolons, double-
 
 ## Testing Guidelines
 
-There is no test framework or coverage requirement. Before committing, run `node --check` on changed JavaScript files, run the local server, verify HTTP 200 responses for the page, manifest, Service Worker, and audio file, then manually test play, pause, seeking, volume, and the single playlist item in a desktop browser and iPhone Safari.
+There is no test framework or coverage requirement. Before committing, run `node --check` on changed JavaScript files, run the local server, verify HTTP 200 responses for the page, manifest, and Service Worker, then manually test local import, persistence, play, pause, seeking, volume, playlist management, and offline reopening in iPhone Safari.
 
 ## Commit & Pull Request Guidelines
 

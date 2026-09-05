@@ -1,11 +1,12 @@
 # 中文多音频播放器 PWA MVP
 
-这是一个完全免费的静态 PWA 音频播放器。前端固定保留“工作音乐”和“娱乐音乐”两个一级分类，每个分类可以混合放置单首音频和歌单。点击歌单后进入歌单内部的音频列表，支持分类或歌单内的播放、顺序播放和单曲循环。音频文件放在 `audio/` 目录，内容结构直接在 `assets/audioPlaylist.js` 中维护。
+这是一个完全免费的静态 PWA 音频播放器。前端固定保留“工作音乐”和“娱乐音乐”两个一级分类，每个分类可以混合放置单首音频和歌单。点击歌单后进入歌单内部的音频列表，支持分类或歌单内的播放、顺序播放和单曲循环。
+
+音频通过播放器中的“本机上传”从 iPhone“文件”App 导入，并保存在当前 PWA 的 IndexedDB 私有存储中。音频不会上传到服务器，也不会写入 GitHub 仓库。
 
 ## 本地运行
 
 ```bash
-npm run generate-audio
 npm start
 ```
 
@@ -15,29 +16,12 @@ npm start
 
 将仓库推送到 GitHub 后，在仓库的 **Settings → Pages** 中选择从 `main` 分支的根目录发布。发布后使用 iPhone Safari 打开 GitHub Pages 地址，点击“播放”即可测试。
 
-## 添加音频
+## 从本机添加音频
 
-播放器适配 `.m4a` 音频，当前推荐使用 AAC 编码的 M4A 文件（例如 AAC-LC、44.1 kHz、双声道）。将音频文件放入 `audio/`，然后在 `assets/audioPlaylist.js` 对应分类的 `items` 数组中登记。单首音频使用 `type: "track"`，歌单使用 `type: "playlist"`，歌单内部的 `tracks` 数组继续登记单首音频，例如：
+点击“本机上传”，从 iPhone“文件”App 选择一个或多个音频，然后选择一级分类和目标位置：直接进入分类、新建歌单或加入已有歌单。一次选择的多个文件会进入同一个目标。
 
-```js
-{
-  id: "focus-track",
-  type: "track",
-  title: "专注音乐",
-  artist: "工作音乐",
-  src: "./audio/focus-track.wav"
-},
-{
-  id: "morning-playlist",
-  type: "playlist",
-  title: "晨间歌单",
-  tracks: [
-    {
-      id: "morning-01",
-      type: "track",
-      title: "晨间第一首",
-      src: "./audio/morning-01.wav"
-    }
-  ]
-}
-```
+音频标题默认使用原始文件名。重复文件会自动跳过，不支持的格式不会转码。当前建议优先使用 iOS Safari 能播放的 AAC 编码 M4A、MP3 或 WAV 文件。
+
+列表中的“移动”可以将音频移动到一级分类或已有歌单；“删除”会从本机音频库永久删除文件。删除歌单只会解除歌单关系，歌单内音频会保留在一级分类中。
+
+音频仅保存在本机。清除网站数据、系统存储压力或浏览器数据清理都可能导致本地音频丢失。

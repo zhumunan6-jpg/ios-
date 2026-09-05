@@ -25,7 +25,10 @@
               <p class="section-kicker">音频分类</p>
               <h2 id="categoryTitle">工作音乐</h2>
             </div>
-            <span id="trackCount" class="track-count">0 个内容</span>
+            <div class="section-heading-actions">
+              <span id="trackCount" class="track-count">0 个内容</span>
+              <button id="importButton" class="import-button" type="button">本机上传</button>
+            </div>
           </div>
           <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="音频分类"></div>
         </div>
@@ -41,6 +44,7 @@
         <audio id="audioPlayer" preload="metadata">
           你的浏览器不支持 HTML5 音频播放。
         </audio>
+        <input id="fileInput" type="file" accept="audio/*" multiple hidden />
 
         <div class="controlBar" aria-label="音频播放控制">
           <button id="previousButton" class="control-button secondary" type="button" aria-label="上一首">
@@ -93,9 +97,53 @@
       </section>
 
       <footer class="app-footer">
-        <p>音频文件随项目一起保存，不上传到服务器。</p>
+        <p>音频仅保存在本机。清除网站数据可能导致音频丢失。</p>
       </footer>
     </main>
+
+    <div id="libraryModal" class="modal-backdrop" hidden>
+      <section class="library-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-heading">
+          <div>
+            <p class="section-kicker">本机音频库</p>
+            <h2 id="modalTitle">导入本机音频</h2>
+          </div>
+          <button id="modalCloseButton" class="modal-close-button" type="button" aria-label="关闭">×</button>
+        </div>
+
+        <p id="modalFileSummary" class="modal-file-summary"></p>
+
+        <label class="modal-field">
+          <span>一级分类</span>
+          <select id="modalCategorySelect"></select>
+        </label>
+
+        <label class="modal-field">
+          <span id="modalDestinationLabel">音频去向</span>
+          <select id="modalDestinationSelect">
+            <option value="category">直接进入一级分类</option>
+            <option value="new-playlist">新建二级歌单</option>
+            <option value="playlist">进入已有二级歌单</option>
+          </select>
+        </label>
+
+        <label id="newPlaylistField" class="modal-field" hidden>
+          <span>新歌单名称</span>
+          <input id="newPlaylistName" type="text" maxlength="80" placeholder="例如：晨间专注" />
+        </label>
+
+        <label id="existingPlaylistField" class="modal-field" hidden>
+          <span>已有歌单</span>
+          <select id="existingPlaylistSelect"></select>
+        </label>
+
+        <p id="modalHint" class="modal-hint">本次选择的音频会进入同一个目标。</p>
+        <div class="modal-actions">
+          <button id="modalCancelButton" class="control-button secondary" type="button">取消</button>
+          <button id="modalConfirmButton" class="control-button primary" type="button">确认导入</button>
+        </div>
+      </section>
+    </div>
 
     <script type="module" src="./assets/audioPlaylist.js"></script>
   </body>

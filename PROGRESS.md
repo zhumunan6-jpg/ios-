@@ -27,13 +27,18 @@ Updated: 2026-09-05
 - Added both bundled audio files to the Service Worker app shell cache.
 - Split the oversized work BGM at its midpoint into two original-quality M4A segments.
 - Converted the work music entry into the `深度工作音乐极简器乐高效` playlist with ordered items `一` and `二`.
+- Replaced the static bundled audio catalog with a local IndexedDB audio library.
+- Added iPhone Files app import with fixed first-level categories, new/existing playlist selection, duplicate detection, and unsupported-format feedback.
+- Added local track move/delete controls and playlist deletion that preserves its tracks in the first-level category.
+- Removed the three bundled M4A files and obsolete audio generator from the repository.
+- Updated the Service Worker to cache only the app shell and updated the README and repository guidelines for local audio storage.
 
 ## Pending
 
 - Enable GitHub Pages: `main` branch, root directory.
-- Test playback and offline reopening on iPhone Safari.
-- Future: add more tracks; phone upload is not implemented.
-- Phone upload is still not implemented; future audio is added through repository files and configuration.
+- Test local import, playback, persistence, and offline reopening on iPhone Safari from the Home Screen PWA.
+- Future: add more tracks.
+- Future: add local library export/import backup if needed.
 
 ## Run
 
