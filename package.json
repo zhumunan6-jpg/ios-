@@ -1,0 +1,11 @@
+{
+  "name": "chinese-audio-player-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "generate-audio": "node scripts/generate-bbbbb-wav.mjs"
+  }
+}
+

@@ -1,0 +1,20 @@
+{
+  "name": "中文音频播放器",
+  "short_name": "音频播放器",
+  "description": "一个简单的中文多音频播放器 PWA",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "./icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

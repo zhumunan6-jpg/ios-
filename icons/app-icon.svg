@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="音频播放器图标">
+  <rect width="192" height="192" rx="36" fill="#1f2937"/>
+  <path d="M54 82h26v28H54zM112 58h26v76h-26z" fill="#fff"/>
+  <path d="M80 82h32v28H80z" fill="#9ca3af"/>
+</svg>
+
