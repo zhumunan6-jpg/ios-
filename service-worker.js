@@ -1,13 +1,13 @@
-const CACHE_NAME = "audio-player-mvp-v2";
+const CACHE_NAME = "audio-player-mvp-v4";
 
 const appShell = [
   "./",
   "./index.html",
   "./assets/audioPlayer.css",
   "./assets/audioPlaylist.js",
-  "./audio/bbbbb.wav",
-  "./audio/work-focus.wav",
-  "./audio/entertainment-chill.wav",
+  "./audio/work-deep-focus-1.m4a",
+  "./audio/work-deep-focus-2.m4a",
+  "./audio/entertainment-hires-rock.m4a",
   "./manifest.webmanifest",
   "./icons/app-icon.svg"
 ];

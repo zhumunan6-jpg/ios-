@@ -9,6 +9,7 @@ const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".m4a": "audio/mp4",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".wav": "audio/wav",
@@ -46,4 +47,3 @@ server.listen(port, "0.0.0.0", () => {
   console.log(`音频播放器运行中：http://localhost:${port}`);
   console.log("同一 Wi-Fi 下的手机可使用电脑局域网 IP 访问，例如 http://192.168.x.x:4173");
 });
-

@@ -2,32 +2,40 @@ const categories = [
   {
     id: "work",
     title: "工作音乐",
-    tracks: [
+    items: [
       {
-        id: "work-bbbbb",
-        title: "BBBBB 音频",
-        src: "./audio/bbbbb.wav"
-      },
-      {
-        id: "work-focus",
-        title: "专注提示音",
-        src: "./audio/work-focus.wav"
+        id: "work-deep-focus",
+        type: "playlist",
+        title: "深度工作音乐极简器乐高效",
+        tracks: [
+          {
+            id: "work-deep-focus-1",
+            type: "track",
+            title: "一",
+            artist: "深度工作音乐 · 第一部分",
+            src: "./audio/work-deep-focus-1.m4a"
+          },
+          {
+            id: "work-deep-focus-2",
+            type: "track",
+            title: "二",
+            artist: "深度工作音乐 · 第二部分",
+            src: "./audio/work-deep-focus-2.m4a"
+          }
+        ]
       }
     ]
   },
   {
     id: "entertainment",
     title: "娱乐音乐",
-    tracks: [
+    items: [
       {
-        id: "entertainment-bbbbb",
-        title: "BBBBB 音频",
-        src: "./audio/bbbbb.wav"
-      },
-      {
-        id: "entertainment-chill",
-        title: "轻松提示音",
-        src: "./audio/entertainment-chill.wav"
+        id: "entertainment-hires-rock",
+        type: "track",
+        title: "Hi-Res无损整轨",
+        artist: "万能青年旅店 · 二专",
+        src: "./audio/entertainment-hires-rock.m4a"
       }
     ]
   }
@@ -49,22 +57,47 @@ const statusMessage = document.querySelector("#statusMessage");
 const categoryTitle = document.querySelector("#categoryTitle");
 const categoryTabs = document.querySelector("#categoryTabs");
 const trackCount = document.querySelector("#trackCount");
+const backButton = document.querySelector("#backButton");
+const playlistKicker = document.querySelector("#playlistKicker");
+const playlistTitle = document.querySelector("#playlistTitle");
+const playlistHint = document.querySelector("#playlistHint");
 
 let activeCategoryIndex = 0;
 let lastVolume = 1;
 let playMode = "sequential";
-const categoryStates = categories.map(() => ({ activeIndex: 0 }));
+const categoryStates = categories.map(() => ({
+  playlistId: null,
+  activeIndex: 0,
+  activeTrackId: null
+}));
 
 function getActiveCategory() {
   return categories[activeCategoryIndex];
 }
 
-function getActiveTracks() {
-  return getActiveCategory().tracks;
-}
-
 function getActiveState() {
   return categoryStates[activeCategoryIndex];
+}
+
+function getActivePlaylist() {
+  const state = getActiveState();
+
+  if (!state.playlistId) {
+    return null;
+  }
+
+  return getActiveCategory().items.find(
+    (item) => item.type === "playlist" && item.id === state.playlistId
+  ) || null;
+}
+
+function getActiveItems() {
+  const activePlaylist = getActivePlaylist();
+  return activePlaylist ? activePlaylist.tracks || [] : getActiveCategory().items;
+}
+
+function getActiveTracks() {
+  return getActiveItems().filter((item) => item.type === "track");
 }
 
 function formatTime(seconds) {
@@ -99,25 +132,81 @@ function renderCategories() {
   });
 }
 
+function createItemButton(item, isActive, clickHandler) {
+  const button = document.createElement("button");
+  const icon = document.createElement("span");
+  const copy = document.createElement("span");
+  const title = document.createElement("strong");
+  const detail = document.createElement("small");
+
+  button.type = "button";
+  button.className = `playlist-item${isActive ? " active" : ""}`;
+  button.addEventListener("click", clickHandler);
+
+  icon.className = "item-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = item.type === "playlist" ? "☷" : "♫";
+
+  copy.className = "item-copy";
+  title.textContent = item.title;
+  detail.textContent = item.type === "playlist"
+    ? `${item.tracks?.length || 0} 首音频`
+    : item.artist || "单曲音频";
+  copy.append(title, detail);
+
+  button.append(icon, copy);
+
+  if (item.type === "playlist") {
+    const arrow = document.createElement("span");
+    arrow.className = "item-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "→";
+    button.append(arrow);
+    button.setAttribute("aria-label", `打开歌单：${item.title}`);
+  } else {
+    button.setAttribute("aria-current", String(isActive));
+  }
+
+  return button;
+}
+
 function renderPlaylist() {
+  const items = getActiveItems();
   const tracks = getActiveTracks();
+  const state = getActiveState();
+  const currentPlaylist = getActivePlaylist();
 
   playlist.replaceChildren();
   categoryTitle.textContent = getActiveCategory().title;
-  trackCount.textContent = `${tracks.length} 首音频`;
+  playlistTitle.textContent = currentPlaylist?.title || getActiveCategory().title;
+  playlistKicker.textContent = currentPlaylist ? "歌单内音频" : "内容列表";
+  playlistHint.textContent = currentPlaylist ? "歌单" : "单曲和歌单";
+  trackCount.textContent = currentPlaylist
+    ? `${tracks.length} 首音频`
+    : `${items.length} 个内容`;
+  backButton.hidden = !currentPlaylist;
 
-  tracks.forEach((track, index) => {
-    const item = document.createElement("li");
-    const button = document.createElement("button");
+  if (items.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "playlist-empty";
+    emptyItem.textContent = currentPlaylist ? "歌单暂无音频" : "暂无音频或歌单，请稍后添加";
+    playlist.append(emptyItem);
+  }
 
-    button.type = "button";
-    button.className = `playlist-item${index === getActiveState().activeIndex ? " active" : ""}`;
-    button.textContent = track.title;
-    button.setAttribute("aria-current", index === getActiveState().activeIndex ? "true" : "false");
-    button.addEventListener("click", () => loadTrack(index, true));
+  items.forEach((item) => {
+    const itemElement = document.createElement("li");
+    const isActive = item.type === "track" && item.id === state.activeTrackId;
 
-    item.append(button);
-    playlist.append(item);
+    itemElement.append(
+      createItemButton(
+        item,
+        isActive,
+        item.type === "playlist"
+          ? () => openPlaylist(item.id)
+          : () => loadTrack(tracks.findIndex((track) => track.id === item.id), true)
+      )
+    );
+    playlist.append(itemElement);
   });
 
   previousButton.disabled = tracks.length < 2;
@@ -153,8 +242,22 @@ function loadTrack(index, shouldPlay = false) {
   const tracks = getActiveTracks();
   const state = getActiveState();
 
+  if (tracks.length === 0) {
+    state.activeIndex = 0;
+    state.activeTrackId = null;
+    playerTitle.textContent = "暂无音频";
+    audio.removeAttribute("src");
+    audio.load();
+    renderPlaylist();
+    updateProgress();
+    updatePlaybackState();
+    setStatus(getActivePlaylist() ? "歌单暂无音频" : "该分类暂无音频或歌单");
+    return;
+  }
+
   state.activeIndex = (index + tracks.length) % tracks.length;
   const track = tracks[state.activeIndex];
+  state.activeTrackId = track.id;
 
   playerTitle.textContent = track.title;
   audio.src = new URL(track.src, document.baseURI).href;
@@ -172,19 +275,53 @@ function loadTrack(index, shouldPlay = false) {
   }
 }
 
+function openPlaylist(playlistId) {
+  const selectedPlaylist = getActiveCategory().items.find(
+    (item) => item.type === "playlist" && item.id === playlistId
+  );
+
+  if (!selectedPlaylist) {
+    return;
+  }
+
+  const state = getActiveState();
+  state.playlistId = playlistId;
+  state.activeIndex = 0;
+  renderPlaylist();
+  setStatus(`已打开歌单“${selectedPlaylist.title}”`);
+}
+
+function closePlaylist() {
+  const state = getActiveState();
+
+  state.playlistId = null;
+  state.activeIndex = 0;
+  renderPlaylist();
+  setStatus(`已返回${getActiveCategory().title}`);
+}
+
 function switchCategory(index) {
   if (index === activeCategoryIndex) {
     return;
   }
 
   activeCategoryIndex = index;
+  const state = getActiveState();
+  state.playlistId = null;
+  state.activeIndex = 0;
+  state.activeTrackId = null;
   audio.pause();
   renderCategories();
-  loadTrack(getActiveState().activeIndex);
+  loadTrack(0);
   setStatus(`已切换到${getActiveCategory().title}`);
 }
 
 playButton.addEventListener("click", () => {
+  if (getActiveTracks().length === 0) {
+    setStatus(getActivePlaylist() ? "当前歌单暂无音频" : "当前分类暂无音频");
+    return;
+  }
+
   if (audio.paused) {
     audio.play().catch(() => setStatus("播放失败，请再次点击“播放”"));
   } else {
@@ -194,6 +331,7 @@ playButton.addEventListener("click", () => {
 
 previousButton.addEventListener("click", () => loadTrack(getActiveState().activeIndex - 1, true));
 nextButton.addEventListener("click", () => loadTrack(getActiveState().activeIndex + 1, true));
+backButton.addEventListener("click", closePlaylist);
 
 playModeButton.addEventListener("click", () => {
   playMode = playMode === "sequential" ? "loop" : "sequential";
@@ -262,7 +400,7 @@ audio.addEventListener("ended", () => {
 
   updatePlaybackState();
   updateProgress();
-  setStatus(`${getActiveCategory().title}已播放完毕`);
+  setStatus(`${getActivePlaylist()?.title || getActiveCategory().title}已播放完毕`);
 });
 audio.addEventListener("error", () => {
   updatePlaybackState();

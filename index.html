@@ -25,14 +25,14 @@
               <p class="section-kicker">音频分类</p>
               <h2 id="categoryTitle">工作音乐</h2>
             </div>
-            <span id="trackCount" class="track-count">2 首音频</span>
+            <span id="trackCount" class="track-count">0 个内容</span>
           </div>
           <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="音频分类"></div>
         </div>
 
         <div class="track-summary">
           <span class="track-label">正在播放</span>
-          <h2 id="player-title">BBBBB 音频</h2>
+          <h2 id="player-title">暂无音频</h2>
           <p id="statusMessage" class="status-message" role="status" aria-live="polite">
             点击“播放”开始
           </p>
@@ -75,7 +75,19 @@
         </div>
 
         <div class="playlist-section">
-          <h3>音频列表</h3>
+          <div class="playlist-heading">
+            <div class="playlist-heading-main">
+              <button id="backButton" class="back-button" type="button" hidden>
+                <span aria-hidden="true">←</span>
+                返回分类
+              </button>
+              <div>
+                <p id="playlistKicker" class="section-kicker">内容列表</p>
+                <h3 id="playlistTitle">工作音乐</h3>
+              </div>
+            </div>
+            <span id="playlistHint" class="playlist-hint">单曲和歌单</span>
+          </div>
           <ol id="playlist" class="playlist" aria-label="音频列表"></ol>
         </div>
       </section>

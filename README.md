@@ -1,6 +1,6 @@
 # 中文多音频播放器 PWA MVP
 
-这是一个完全免费的静态 PWA 音频播放器。当前前端 Demo 分为“工作音乐”和“娱乐音乐”两个独立分类，支持分类内播放列表、顺序播放和单曲循环。项目内置三份本地生成的提示音，用于检查播放流程；以后可以直接替换 `audio/` 文件和曲目配置。
+这是一个完全免费的静态 PWA 音频播放器。前端固定保留“工作音乐”和“娱乐音乐”两个一级分类，每个分类可以混合放置单首音频和歌单。点击歌单后进入歌单内部的音频列表，支持分类或歌单内的播放、顺序播放和单曲循环。音频文件放在 `audio/` 目录，内容结构直接在 `assets/audioPlaylist.js` 中维护。
 
 ## 本地运行
 
@@ -17,4 +17,27 @@ npm start
 
 ## 添加音频
 
-将音频文件放入 `audio/`，然后在 `assets/audioPlaylist.js` 对应分类的 `tracks` 数组中添加记录。
+播放器适配 `.m4a` 音频，当前推荐使用 AAC 编码的 M4A 文件（例如 AAC-LC、44.1 kHz、双声道）。将音频文件放入 `audio/`，然后在 `assets/audioPlaylist.js` 对应分类的 `items` 数组中登记。单首音频使用 `type: "track"`，歌单使用 `type: "playlist"`，歌单内部的 `tracks` 数组继续登记单首音频，例如：
+
+```js
+{
+  id: "focus-track",
+  type: "track",
+  title: "专注音乐",
+  artist: "工作音乐",
+  src: "./audio/focus-track.wav"
+},
+{
+  id: "morning-playlist",
+  type: "playlist",
+  title: "晨间歌单",
+  tracks: [
+    {
+      id: "morning-01",
+      type: "track",
+      title: "晨间第一首",
+      src: "./audio/morning-01.wav"
+    }
+  ]
+}
+```
